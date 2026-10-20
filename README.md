@@ -54,6 +54,8 @@ That's it. I will deal the rest of the things.
 Every time you open the file to work on things, first enter
 
 >git checkout main
+
 >git pull
+
 >git checkout feature/FEATURE_NAME
 
