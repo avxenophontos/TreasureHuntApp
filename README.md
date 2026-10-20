@@ -13,6 +13,7 @@ Open Webstorm: Clone the repository
 You will start off in the main branch.
 
 >git checkout main
+
 >git pull
 
 Then you will create a separate branch for each feature you work on.
