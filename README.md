@@ -7,12 +7,12 @@
 ## Team
 | Name | Role |
 |------|------|
-| [Andreas]  | [Team Lead]   |
-| [Dimitris] | [Developer 1] |
-| [Kyriakos] | [Developer 2] |
-| [Dania]    | [Designer]    |
-| [ ]        | [Tester]      |
-| [George]   | [Marketing]   |
+| Andreas  | Team Lead   |
+| Dimitris | Developer 1 |
+| Kyriakos | Developer 2 |
+| Dania    | Designer    |
+|          | Tester      |
+| George   | Marketing   |
 
 ## Technologies
 - [HTML]
