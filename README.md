@@ -23,7 +23,7 @@
 [Go to the website and click search for game]
 
 ## Credits
-- [any AI-generated media, with the tool name]
+- []
 
 ## Module
 [CO1034/CO1111, University of Central Lancashire (UCLan Cyprus), 2026-2027]
