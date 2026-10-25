@@ -47,11 +47,17 @@ Next go to github and then to your Profile settings (The Icon in the top right)
 
 >git push -u origin feature/FEATURE_NAME
 
-IF IT REQUIRES IT put in your GitHub username and the copy the token code from before
+IF IT REQUIRES IT put in your GitHub username and the copy the token code from before.
+
+Now go to the GitHub Project. You will see that the repository has a new commit. From there you can send a pull request. 
+-Click Pull request
+-Then Create Pull request.
+-Write a small note/explanation of what it is/ what the change is.
+-Then click Create Pull request.
 
 That's it. I will deal the rest of the things.
 
-Every time you open the file to work on things, first enter
+Every time you work on a new feature/part, first enter
 
 >git checkout main
 
