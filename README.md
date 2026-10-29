@@ -11,10 +11,10 @@
 | Dimitris | Developer 1 |
 | Kyriakos | Developer 2 |
 | Dania    | Designer    |
-|          | Tester      |
+| Andreas  | Tester      |
 | George   | Marketing   |
 
-## Technologies
+## Languages
 - [HTML]
 - [CSS]
 - [JavaScript]
