@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasure Hunt</title>
+
+    <!-- ===== CONFIG / EXTERNAL VARIABLES =====
+         Define these in a separate script loaded BEFORE the main script if you prefer. -->
+    <script>
+        // The name must match the "player" field the leaderboard API returns.
+        window.GAME_USER = { name: "Jack-16", points: 0 };
+
+        window.GAME_CONFIG = {
+            LIST_URL:        "https://codecyprus.org/th/test-api/list?number-of-ths=2",
+            START_URL:       "https://codecyprus.org/th/test-api/start?player=inactive",
+            QUESTION_URL:    "https://codecyprus.org/th/test-api/question?completed&question-type=MCQ&can-be-skipped&requires-location",
+            LEADERBOARD_URL: "https://codecyprus.org/th/test-api/leaderboard?sorted&hasPrize&size=42",
+            ANSWER_CHOICES:  ["A", "B", "C", "D"],  // the question API sends no answer text, only the type "MCQ"
+            HIDE_UNLISTED:   false,                 // true = hide games whose visibility is UNLISTED
+            TIMEOUT_MS:      10000,                 // give up on an API call after this long
+            REFRESH_MS:      5000                   // leaderboard refresh interval
+        };
+    </script>
+
+    <style>
+        :root {
+            --bg: #12141c;
+            --panel: #1c1f2b;
+            --text: #e8eaf2;
+            --muted: #8b90a5;
+            --accent: #f5b942;
+            --you: #2e3350;
+            --border: #2a2e40;
+            --sidebar-width: 300px;
+        }
+        html.is-desktop { --sidebar-width: 300px; }
+        html.is-mobile  { --sidebar-width: min(320px, 88vw); }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        /* ===== Sidebar (only exists on the question view) ===== */
+        .sidebar {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 30;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            background: var(--panel);
+            transition: width 0.3s;
+            padding-top: 56px;
+        }
+        body.nav-open .sidebar { width: var(--sidebar-width); border-right: 1px solid var(--border); }
+        body:not(.in-question) .sidebar,
+        body:not(.in-question) .backdrop { display: none !important; }
+
+        .sidebar-inner { width: var(--sidebar-width); padding: 0 16px 24px; }
+
+        .sidebar .closebtn {
+            position: absolute; top: 8px; right: 12px; width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px; line-height: 1; color: var(--muted); text-decoration: none;
+        }
+        .sidebar .closebtn:hover { color: var(--text); }
+
+        .user-card { padding: 12px 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+        .user-name { font-size: 1.15rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .points { margin-top: 4px; color: var(--accent); font-weight: 700; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+        .points small { color: var(--muted); font-size: 0.8rem; font-weight: 500; }
+
+        .section-title { margin: 18px 0 8px; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+        .leaderboard { list-style: none; margin: 0; padding: 0; }
+        .leaderboard li { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 6px; transition: background 0.3s; }
+        .leaderboard li.you { background: var(--you); }
+        .leaderboard li.flash { background: rgba(245, 185, 66, 0.25); }
+        .leaderboard li.gap { margin-top: 6px; border-top: 1px dashed var(--border); border-radius: 0 0 6px 6px; }
+        .rank { min-width: 22px; color: var(--muted); text-align: right; }
+        .lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-points { font-variant-numeric: tabular-nums; color: var(--accent); }
+        .lb-time { min-width: 38px; text-align: right; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+        .status { margin-top: 8px; font-size: 0.7rem; color: var(--muted); }
+
+        .backdrop { display: none; position: fixed; inset: 0; z-index: 25; background: rgba(0, 0, 0, 0.55); }
+
+        /* ===== Page shell ===== */
+        #main { transition: margin-left 0.3s; }
+        .page { max-width: 760px; margin: 0 auto; padding: 20px 16px 48px; }
+
+        .view { display: none; }
+        .view.active { display: block; }
+
+        .view-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        h1 { font-size: 1.4rem; margin: 0; }
+        .muted { color: var(--muted); }
+
+        .btn {
+            background: var(--panel); color: var(--text);
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 10px 16px; font: inherit; cursor: pointer;
+        }
+        .btn:hover:not(:disabled) { border-color: var(--accent); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn.primary { background: var(--accent); border-color: var(--accent); color: #1a1405; font-weight: 600; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+        .error-text { color: #ff8a80; }
+        .error-box { background: rgba(255, 90, 80, 0.1); border: 1px solid #6b2f2a; border-radius: 10px; padding: 12px 16px; margin: 16px 0; }
+        .error-box ul { margin: 0; padding-left: 18px; }
+        .notice { background: rgba(245, 185, 66, 0.1); border: 1px solid #6b5420; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; }
+        .notice p { margin: 0 0 8px; }
+
+        .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px 0; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== 1. Session list ===== */
+        .session-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+        .session-card {
+            display: block; width: 100%; text-align: left;
+            background: var(--panel); color: var(--text);
+            border: 1px solid var(--border); border-radius: 12px;
+            padding: 16px; font: inherit; cursor: pointer;
+        }
+        .session-card:hover, .session-card:focus-visible { border-color: var(--accent); }
+        .session-card h2 { margin: 0 0 4px; font-size: 1.05rem; }
+        .session-card p { margin: 0 0 10px; color: var(--muted); }
+        .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+        .badge.ok   { color: #6fdc8c; border-color: #2f6b40; }
+        .badge.warn { color: var(--accent); border-color: #6b5420; }
+        .badge.bad  { color: #ff8a80; border-color: #6b2f2a; }
+        .meta { font-size: 0.8rem; color: var(--muted); }
+
+        /* ===== 3. Question ===== */
+        .progress { height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
+        .progress > div { height: 100%; width: 0; background: var(--accent); transition: width 0.3s; }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .question-text { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; line-height: 1.5; margin-bottom: 16px; overflow-wrap: anywhere; }
+        .question-text code, .question-text pre { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+        .question-text a { color: var(--accent); }
+        .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .answer {
+            display: flex; align-items: center; gap: 12px;
+            background: var(--panel); color: var(--text);
+            border: 1px solid var(--border); border-radius: 10px;
+            padding: 14px 16px; font: inherit; cursor: pointer; text-align: left;
+        }
+        .answer:hover:not(:disabled) { border-color: var(--accent); }
+        .answer:disabled { opacity: 0.55; cursor: not-allowed; }
+        .answer.selected { border-color: var(--accent); background: var(--you); opacity: 1; }
+        .answer .letter { font-weight: 700; color: var(--accent); min-width: 1.2em; }
+        .feedback { margin: 16px 0 0; color: var(--muted); }
+
+        /* Leaderboard test tools */
+        details.test-panel { margin-top: 28px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+        details.test-panel summary { cursor: pointer; font-size: 0.9rem; }
+        .test-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .test-buttons .btn { flex: 1; }
+        .test-info { margin: 12px 0 0; font-size: 0.8rem; color: var(--muted); }
+
+        /* ===== DESKTOP: sidebar pushes content ===== */
+        html.is-desktop body.nav-open #main { margin-left: var(--sidebar-width); }
+        html.is-desktop body.nav-open .openbtn { display: none; }
+        html.is-desktop .leaderboard li:hover { background: rgba(255, 255, 255, 0.05); }
+        html.is-desktop .session-card { transition: transform 0.15s; }
+        html.is-desktop .session-card:hover { transform: translateY(-2px); }
+
+        /* ===== MOBILE: overlay sidebar, bigger tap targets, single column ===== */
+        html.is-mobile body.nav-open { overflow: hidden; }
+        html.is-mobile body.nav-open .backdrop { display: block; }
+        html.is-mobile .sidebar { padding-top: 64px; }
+        html.is-mobile .sidebar .closebtn { width: 48px; height: 48px; font-size: 36px; }
+        html.is-mobile .user-name { font-size: 1.25rem; }
+        html.is-mobile .points { font-size: 2rem; }
+        html.is-mobile .leaderboard li { padding: 12px 8px; font-size: 1rem; }
+        html.is-mobile .btn, html.is-mobile .answer { min-height: 48px; }
+        html.is-mobile .answers { grid-template-columns: 1fr; }
+        html.is-mobile .actions .btn, html.is-mobile .head-actions .btn { flex: 1; }
+    </style>
+</head>
+<body>
+
+<!-- Leaderboard sidebar: shown only while the question view is active -->
+<aside id="mySidebar" class="sidebar" aria-label="Leaderboard">
+    <a href="javascript:void(0)" class="closebtn" onclick="closeNav()" aria-label="Close sidebar">&times;</a>
+    <div class="sidebar-inner">
+        <div class="user-card">
+            <div class="user-name" id="userName">Loading…</div>
+            <div class="points"><span id="userPoints">0</span> <small>pts</small></div>
+        </div>
+        <h2 class="section-title">Leaderboard</h2>
+        <ol class="leaderboard" id="leaderboard"></ol>
+        <div class="status" id="status">Updating live…</div>
+    </div>
+</aside>
+<div class="backdrop" id="backdrop" onclick="closeNav()"></div>
+
+<main id="main">
+    <div class="page">
+
+        <!-- ===== Container 1: available game sessions ===== -->
+        <section id="view-list" class="view active" aria-labelledby="listTitle">
+            <div class="view-head">
+                <h1 id="listTitle">Available games</h1>
+                <button class="btn" id="reloadListBtn" type="button">Reload</button>
+            </div>
+            <p class="muted" id="listStatus" role="status">Loading games…</p>
+            <ul class="session-list" id="sessionList"></ul>
+        </section>
+
+        <!-- ===== Container 2: joining a session (start API + error checks) ===== -->
+        <section id="view-join" class="view" aria-labelledby="joinTitle">
+            <h1 id="joinTitle">Joining game…</h1>
+            <p class="muted" id="joinGame"></p>
+            <div class="spinner" id="joinSpinner" role="status" aria-label="Loading"></div>
+            <div class="error-box" id="joinError" hidden>
+                <ul id="joinErrorList"></ul>
+            </div>
+            <div class="actions">
+                <button class="btn primary" id="retryJoinBtn" type="button" hidden>Try again</button>
+                <button class="btn" id="joinBackBtn" type="button">Back to games</button>
+            </div>
+        </section>
+
+        <!-- ===== Container 3: question + 4 answers (leaderboard sidebar lives here) ===== -->
+        <section id="view-question" class="view" aria-labelledby="qTitle">
+            <div class="view-head">
+                <div>
+                    <div class="muted" id="qGame"></div>
+                    <h1 id="qTitle">Question</h1>
+                </div>
+                <div class="head-actions">
+                    <button class="btn openbtn" type="button" onclick="openNav()">&#9776; Leaderboard</button>
+                    <button class="btn" id="leaveBtn" type="button">Leave game</button>
+                </div>
+            </div>
+
+            <div class="progress" aria-hidden="true"><div id="progressBar"></div></div>
+            <div class="chips" id="scoreChips"></div>
+
+            <div class="notice" id="locationNotice" hidden>
+                <p id="locationText">This question needs your location.</p>
+                <button class="btn" id="locationBtn" type="button">Share my location</button>
+            </div>
+
+            <div class="question-text" id="qText"></div>
+            <div class="answers" id="qAnswers"></div>
+
+            <div class="actions">
+                <button class="btn" id="skipBtn" type="button" hidden>Skip</button>
+                <button class="btn primary" id="nextBtn" type="button" hidden>Next question</button>
+            </div>
+            <p class="feedback" id="qFeedback" role="status"></p>
+
+            <details class="test-panel">
+                <summary>Leaderboard test tools</summary>
+                <div class="test-buttons">
+                    <button class="btn" id="addPointsBtn" type="button">+ points</button>
+                    <button class="btn" id="subPointsBtn" type="button">&minus; points</button>
+                </div>
+                <p class="test-info" id="testInfo">Waiting for leaderboard data…</p>
+            </details>
+        </section>
+
+        <!-- ===== Container 4: game completed ===== -->
+        <section id="view-done" class="view" aria-labelledby="doneTitle">
+            <h1 id="doneTitle">Game completed</h1>
+            <p class="muted" id="doneText"></p>
+            <div class="actions">
+                <button class="btn primary" id="doneBackBtn" type="button">Back to games</button>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<script>
+    (function () {
+        "use strict";
+
+        const CFG = Object.assign({
+            LIST_URL: "", START_URL: "", QUESTION_URL: "", LEADERBOARD_URL: "",
+            ANSWER_CHOICES: ["A", "B", "C", "D"], HIDE_UNLISTED: false,
+            TIMEOUT_MS: 10000, REFRESH_MS: 5000
+        }, window.GAME_CONFIG || {});
+
+        const user = window.GAME_USER || { name: "Guest", points: 0 };
+        const $ = (id) => document.getElementById(id);
+        const root = document.documentElement;
+
+        // =====================================================================
+        // API helper with checks
+        //  - network failure / timeout  -> friendly message
+        //  - status "ERROR"             -> the API's own errorMessages
+        //  - bad HTTP code / bad JSON / status other than "OK" -> generic message
+        // =====================================================================
+        class ApiError extends Error {
+            constructor(messages) { super(messages.join(" ")); this.messages = messages; }
+        }
+
+        async function apiGet(url) {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), CFG.TIMEOUT_MS);
+            let res;
+            try {
+                res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+            } catch (e) {
+                throw new Error(e && e.name === "AbortError"
+                    ? "The server took too long to respond."
+                    : "Couldn't reach the server. Check your connection and try again.");
+            } finally {
+                clearTimeout(timer);
+            }
+
+            let data;
+            try {
+                data = await res.json();
+            } catch (e) {
+                throw new Error(res.ok ? "The server sent an unreadable response."
+                    : "Server error (HTTP " + res.status + ").");
+            }
+
+            if (data && data.status === "ERROR") {
+                const msgs = Array.isArray(data.errorMessages) ? data.errorMessages.map(String).filter(Boolean) : [];
+                throw new ApiError(msgs.length ? msgs : ["Something went wrong."]);
+            }
+            if (!res.ok) throw new Error("Server error (HTTP " + res.status + ").");
+            if (!data || data.status !== "OK") throw new Error("Unexpected response from the server.");
+            return data;
+        }
+
+        // Append query parameters WITHOUT touching existing ones. Valueless flags such as
+        // "?completed&can-be-skipped" stay exactly as written (URLSearchParams would rewrite them).
+        function withParams(url, params) {
+            const existing = new URL(url).searchParams;
+            let out = url;
+            Object.keys(params).forEach((k) => {
+                const v = params[k];
+                if (v == null || v === "" || existing.has(k)) return;
+                out += (out.indexOf("?") === -1 ? "?" : "&") + encodeURIComponent(k) + "=" + encodeURIComponent(v);
+            });
+            return out;
+        }
+
+        // Question text may contain HTML. Only a small whitelist is rendered; everything
+        // else is reduced to its text, and scripts/styles/frames are dropped entirely.
+        const ALLOWED_TAGS = new Set(["B", "STRONG", "I", "EM", "U", "CODE", "PRE", "BR", "P", "UL", "OL", "LI", "A", "SPAN"]);
+        const DROP_TAGS = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "TEMPLATE", "NOSCRIPT", "SVG", "MATH"]);
+
+        function setSafeHtml(target, html) {
+            const doc = new DOMParser().parseFromString(String(html || ""), "text/html");
+            const frag = document.createDocumentFragment();
+            (function walk(src, dst) {
+                src.childNodes.forEach((node) => {
+                    if (node.nodeType === 3) {
+                        dst.appendChild(document.createTextNode(node.textContent));
+                    } else if (node.nodeType === 1) {
+                        if (DROP_TAGS.has(node.tagName.toUpperCase())) return;
+                        if (ALLOWED_TAGS.has(node.tagName)) {
+                            const el = document.createElement(node.tagName.toLowerCase());
+                            if (node.tagName === "A") {
+                                const href = node.getAttribute("href") || "";
+                                if (/^https?:\/\//i.test(href)) {
+                                    el.setAttribute("href", href);
+                                    el.setAttribute("target", "_blank");
+                                    el.setAttribute("rel", "noopener noreferrer");
+                                }
+                            }
+                            walk(node, el);
+                            dst.appendChild(el);
+                        } else {
+                            walk(node, dst);
+                        }
+                    }
+                });
+            })(doc.body, frag);
+            target.textContent = "";
+            target.appendChild(frag);
+        }
+
+        const fmtDate = (ms) => new Date(ms).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+        function fmtDuration(ms) {
+            const m = Math.round(ms / 60000);
+            return m >= 60 ? Math.floor(m / 60) + " h" + (m % 60 ? " " + (m % 60) + " min" : "") : m + " min";
+        }
+        function fmtSigned(n) { return n > 0 ? "+" + n : n < 0 ? "−" + Math.abs(n) : "0"; }
+        const isNum = (n) => typeof n === "number" && isFinite(n);
+
+        // =====================================================================
+        // View switching
+        // =====================================================================
+        const views = { list: $("view-list"), join: $("view-join"), question: $("view-question"), done: $("view-done") };
+        let currentView = "list";
+
+        function showView(name) {
+            Object.keys(views).forEach((k) => views[k].classList.toggle("active", k === name));
+            currentView = name;
+            document.body.classList.toggle("in-question", name === "question");
+            if (name === "question") enterLeaderboard(); else exitLeaderboard();
+            window.scrollTo(0, 0);
+        }
+
+        // =====================================================================
+        // Container 1: session list
+        // =====================================================================
+        const $listStatus = $("listStatus");
+        const $sessionList = $("sessionList");
+        const $reload = $("reloadListBtn");
+        let hunts = [];
+
+        async function loadList() {
+            $listStatus.className = "muted";
+            $listStatus.textContent = "Loading games…";
+            $sessionList.textContent = "";
+            $reload.disabled = true;
+            try {
+                const data = await apiGet(CFG.LIST_URL);
+                if (!Array.isArray(data.treasureHunts)) throw new Error("Unexpected response from the server.");
+                hunts = data.treasureHunts.filter((h) =>
+                    h && typeof h.uuid === "string" && h.uuid &&
+                    !(CFG.HIDE_UNLISTED && h.visibility === "UNLISTED"));
+                renderList();
+            } catch (err) {
+                $listStatus.className = "error-text";
+                $listStatus.textContent = "Couldn't load the games. " + err.message;
+            } finally {
+                $reload.disabled = false;
+            }
+        }
+
+        function badge(text, kind) {
+            const b = document.createElement("span");
+            b.className = "badge" + (kind ? " " + kind : "");
+            b.textContent = text;
+            return b;
+        }
+
+        function renderList() {
+            $sessionList.textContent = "";
+            if (!hunts.length) {
+                $listStatus.textContent = "No games are available right now.";
+                return;
+            }
+            $listStatus.textContent = hunts.length + (hunts.length === 1 ? " game" : " games") + " available. Pick one to join.";
+
+            const now = Date.now();
+            hunts.forEach((h) => {
+                const li = document.createElement("li");
+                const card = document.createElement("button");
+                card.type = "button";
+                card.className = "session-card";
+
+                const title = document.createElement("h2");
+                title.textContent = h.name || "Untitled game";
+                card.appendChild(title);
+
+                if (h.description) {
+                    const d = document.createElement("p");
+                    d.textContent = h.description;
+                    card.appendChild(d);
+                }
+
+                // Badges (a quick hint only: the start API makes the real eligibility decision)
+                const badges = document.createElement("div");
+                badges.className = "badges";
+                if (isNum(h.startsOn) && now < h.startsOn)      badges.appendChild(badge("Not started yet", "warn"));
+                else if (isNum(h.endsOn) && now > h.endsOn)     badges.appendChild(badge("Ended", "bad"));
+                else if (isNum(h.startsOn) && isNum(h.endsOn))  badges.appendChild(badge("Open now", "ok"));
+                if (h.visibility === "UNLISTED")                badges.appendChild(badge("Unlisted"));
+                if (h.requiresAuthentication)                   badges.appendChild(badge("Sign-in required", "warn"));
+                if (h.hasPrize)                                 badges.appendChild(badge("Prize"));
+                if (h.shuffled)                                 badges.appendChild(badge("Shuffled questions"));
+                if (badges.childNodes.length) card.appendChild(badges);
+
+                const parts = [];
+                if (isNum(h.startsOn)) parts.push("Opens " + fmtDate(h.startsOn));
+                if (isNum(h.endsOn)) parts.push("closes " + fmtDate(h.endsOn));
+                if (isNum(h.maxDuration)) parts.push("max " + fmtDuration(h.maxDuration) + " per player");
+                if (parts.length) {
+                    const meta = document.createElement("div");
+                    meta.className = "meta";
+                    meta.textContent = parts.join(" · ");
+                    card.appendChild(meta);
+                }
+
+                // Not shown on purpose: ownerEmail, secretCode and salt are private fields.
+                card.addEventListener("click", () => joinGame(h));
+                li.appendChild(card);
+                $sessionList.appendChild(li);
+            });
+        }
+
+        $reload.addEventListener("click", loadList);
+
+        // =====================================================================
+        // Container 2: joining (start API)
+        // =====================================================================
+        const $joinTitle = $("joinTitle");
+        const $joinGame = $("joinGame");
+        const $joinSpinner = $("joinSpinner");
+        const $joinError = $("joinError");
+        const $joinErrorList = $("joinErrorList");
+        const $retryJoin = $("retryJoinBtn");
+
+        let activeHunt = null;
+        let sessionId = null;
+        let totalQuestions = null;
+        let joining = false;
+
+        function setJoinState(state, err) {
+            const failed = state === "error";
+            $joinTitle.textContent = failed ? "Couldn't join this game" : "Joining game…";
+            $joinSpinner.hidden = failed;
+            $joinError.hidden = !failed;
+            $retryJoin.hidden = !failed;
+            $joinErrorList.textContent = "";
+            if (failed) {
+                const msgs = err instanceof ApiError ? err.messages : [err && err.message ? err.message : "Something went wrong."];
+                msgs.forEach((m) => {
+                    const li = document.createElement("li");
+                    li.textContent = m;
+                    $joinErrorList.appendChild(li);
+                });
+            }
+        }
+
+        async function joinGame(hunt) {
+            if (joining) return;          // ignore double clicks while a request is running
+            joining = true;
+            activeHunt = hunt;
+            sessionId = null;
+            $joinGame.textContent = hunt.name || "";
+            showView("join");
+            setJoinState("loading");
+
+            try {
+                // "player" and "treasure-hunt-id" are only added if the configured URL doesn't set them already
+                const startUrl = withParams(CFG.START_URL, { player: user.name, "treasure-hunt-id": hunt.uuid });
+                const data = await apiGet(startUrl);
+                sessionId = typeof data.session === "string" ? data.session : null;
+                totalQuestions = isNum(data.numOfQuestions) ? data.numOfQuestions : null;
+                await loadQuestion();       // switches to the question or completed view on success
+            } catch (err) {
+                setJoinState("error", err);
+            } finally {
+                joining = false;
+            }
+        }
+
+        $retryJoin.addEventListener("click", () => { if (activeHunt) joinGame(activeHunt); });
+        $("joinBackBtn").addEventListener("click", backToList);
+
+        function backToList() {
+            showView("list");
+            loadList();
+        }
+
+        // =====================================================================
+        // Container 3: question + 4 answers
+        // =====================================================================
+        const $qGame = $("qGame");
+        const $qTitle = $("qTitle");
+        const $progressBar = $("progressBar");
+        const $chips = $("scoreChips");
+        const $locNotice = $("locationNotice");
+        const $locText = $("locationText");
+        const $locBtn = $("locationBtn");
+        const $qText = $("qText");
+        const $qAnswers = $("qAnswers");
+        const $skip = $("skipBtn");
+        const $next = $("nextBtn");
+        const $feedback = $("qFeedback");
+
+        let question = null;
+        let location = null;      // { lat, lon } once the player shares it
+        let answered = false;
+
+        async function loadQuestion() {
+            const q = await apiGet(withParams(CFG.QUESTION_URL, { session: sessionId }));
+            if (q.completed === true) { showCompleted(q); return; }
+            question = q;
+            renderQuestion(q);
+            showView("question");
+        }
+
+        function renderQuestion(q) {
+            answered = false;
+            location = null;
+            $feedback.textContent = "";
+            $next.hidden = true;
+
+            $qGame.textContent = activeHunt && activeHunt.name ? activeHunt.name : "";
+
+            // Progress. currentQuestionIndex is treated as zero-based.
+            const total = isNum(q.numOfQuestions) ? q.numOfQuestions : totalQuestions;
+            if (isNum(q.currentQuestionIndex) && isNum(total) && total > 0) {
+                const n = Math.min(q.currentQuestionIndex + 1, total);
+                $qTitle.textContent = "Question " + n + " of " + total;
+                $progressBar.style.width = Math.round((n / total) * 100) + "%";
+            } else {
+                $qTitle.textContent = "Question";
+                $progressBar.style.width = "0";
+            }
+
+            // Scores
+            $chips.textContent = "";
+            if (isNum(q.correctScore)) $chips.appendChild(badge("Correct " + fmtSigned(q.correctScore), "ok"));
+            if (isNum(q.wrongScore))   $chips.appendChild(badge("Wrong " + fmtSigned(q.wrongScore), "bad"));
+            if (q.canBeSkipped === true && isNum(q.skipScore)) $chips.appendChild(badge("Skip " + fmtSigned(q.skipScore), "warn"));
+
+            setSafeHtml($qText, q.questionText);
+
+            // Location requirement
+            const needsLocation = q.requiresLocation === true;
+            $locNotice.hidden = !needsLocation;
+            if (needsLocation) {
+                $locText.textContent = "This question needs your location before you can answer.";
+                $locBtn.hidden = false;
+                $locBtn.disabled = false;
+            }
+
+            // Answers: only multiple-choice is supported in this view
+            $qAnswers.textContent = "";
+            if (q.questionType === "MCQ") {
+                CFG.ANSWER_CHOICES.slice(0, 4).forEach((choice) => {
+                    const b = document.createElement("button");
+                    b.type = "button";
+                    b.className = "answer";
+                    b.dataset.choice = choice;
+                    b.disabled = needsLocation;      // unlocked once the location is shared
+                    const letter = document.createElement("span");
+                    letter.className = "letter";
+                    letter.textContent = choice;
+                    b.appendChild(letter);
+                    b.addEventListener("click", () => submitAnswer(choice, b));
+                    $qAnswers.appendChild(b);
+                });
+            } else {
+                const p = document.createElement("p");
+                p.className = "muted";
+                p.textContent = "This question type (" + (q.questionType || "unknown") + ") isn't supported here yet.";
+                $qAnswers.appendChild(p);
+            }
+
+            // Skip button only when the question allows it
+            $skip.hidden = q.canBeSkipped !== true;
+            $skip.disabled = needsLocation;
+            if (q.canBeSkipped === true && isNum(q.skipScore)) $skip.textContent = "Skip (" + fmtSigned(q.skipScore) + ")";
+            else $skip.textContent = "Skip";
+        }
+
+        function setAnswersEnabled(on) {
+            $qAnswers.querySelectorAll(".answer").forEach((b) => { b.disabled = !on; });
+            $skip.disabled = !on;
+        }
+
+        // Location check (browser geolocation, needs HTTPS or localhost)
+        $locBtn.addEventListener("click", () => {
+            if (!("geolocation" in navigator)) {
+                $locText.textContent = "This browser can't share its location, so this question can't be answered here.";
+                return;
+            }
+            $locBtn.disabled = true;
+            $locText.textContent = "Waiting for your location…";
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    location = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                    $locText.textContent = "Location shared. You can answer now.";
+                    $locBtn.hidden = true;
+                    if (!answered) setAnswersEnabled(true);
+                },
+                (err) => {
+                    const reasons = {
+                        1: "Location permission was denied. Allow it in your browser settings, then try again.",
+                        2: "Your location isn't available right now. Try again in a moment.",
+                        3: "Finding your location took too long. Try again."
+                    };
+                    $locText.textContent = reasons[err.code] || "Couldn't get your location.";
+                    $locBtn.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+            );
+        });
+
+        // NOTE: no answer/skip API has been provided yet, so this only records the choice locally.
+        // Replace the body of this function with the real call when you have the endpoint.
+        function submitAnswer(choice, button) {
+            if (answered) return;
+            answered = true;
+            setAnswersEnabled(false);
+            if (button) button.classList.add("selected");
+            $feedback.textContent = choice === null
+                ? "Skipped locally. No answer API is connected yet, so your score didn't change."
+                : "You chose " + choice + ". No answer API is connected yet, so it wasn't checked and your score didn't change.";
+            $next.textContent = "Next question";
+            $next.hidden = false;
+        }
+
+        $skip.addEventListener("click", () => submitAnswer(null, null));
+
+        $next.addEventListener("click", async () => {
+            $next.disabled = true;
+            try {
+                await loadQuestion();       // re-renders on success, or switches to the completed view
+            } catch (err) {
+                $feedback.textContent = (err instanceof ApiError ? err.messages.join(" ") : err.message) + " Try again.";
+                $next.textContent = "Try again";
+            } finally {
+                $next.disabled = false;
+            }
+        });
+
+        $("leaveBtn").addEventListener("click", backToList);
+
+        // =====================================================================
+        // Container 4: completed
+        // =====================================================================
+        function showCompleted(q) {
+            const total = isNum(q && q.numOfQuestions) ? q.numOfQuestions : totalQuestions;
+            $("doneText").textContent = (activeHunt && activeHunt.name ? "You finished " + activeHunt.name + "." : "You finished the game.") +
+                (isNum(total) ? " " + total + " questions in total." : "");
+            showView("done");
+        }
+        $("doneBackBtn").addEventListener("click", backToList);
+
+        // =====================================================================
+        // Device detection and leaderboard sidebar (question view only)
+        // =====================================================================
+        function detectDevice() {
+            const narrow = window.matchMedia("(max-width: 768px)").matches;
+            const touchOnly =
+                window.matchMedia("(pointer: coarse)").matches &&
+                window.matchMedia("(hover: none)").matches;
+            return (narrow || (touchOnly && window.innerWidth <= 1024)) ? "mobile" : "desktop";
+        }
+        let device = null;
+
+        window.openNav = function () { document.body.classList.add("nav-open"); };
+        window.closeNav = function () { document.body.classList.remove("nav-open"); };
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeNav(); });
+
+        const $name = $("userName");
+        const $points = $("userPoints");
+        const $board = $("leaderboard");
+        const $status = $("status");
+        $name.textContent = user.name;
+
+        function showPoints(value) { $points.textContent = Number(value).toLocaleString(); }
+        showPoints(user.points);
+
+        // Call this from your game if the score changes locally
+        window.updateUserPoints = function (value) {
+            user.points = value;
+            if (lastPlayers.length) renderBoard(lastPlayers); else showPoints(value);
+        };
+
+        let demoPlayers = [
+            { name: "Alice", points: 2100, time: 0 },
+            { name: "Bob", points: 1800, time: 0 },
+            { name: "Cara", points: 1600, time: 0 }
+        ];
+
+        async function fetchLeaderboard() {
+            if (!CFG.LEADERBOARD_URL) {
+                demoPlayers = demoPlayers.map((p) => ({ ...p, points: p.points + Math.floor(Math.random() * 60) }));
+                return demoPlayers;
+            }
+            const data = await apiGet(CFG.LEADERBOARD_URL);
+            if (!Array.isArray(data.leaderboard)) throw new Error("Unexpected response from the server.");
+            return data.leaderboard.map((p) => ({
+                name: String(p.player),
+                points: Number(p.score) || 0,
+                time: Number(p.completionTime) || 0
+            }));
+        }
+
+        // Highest score first. On a tie, finished players (time > 0) rank by fastest time;
+        // unfinished players (time = 0) come last.
+        function compare(a, b) {
+            if (b.points !== a.points) return b.points - a.points;
+            const ta = a.time > 0 ? a.time : Infinity;
+            const tb = b.time > 0 ? b.time : Infinity;
+            return ta === tb ? 0 : ta - tb;
+        }
+
+        function formatTime(ms) {
+            if (!ms) return "";
+            const s = Math.round(ms / 1000);
+            return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+        }
+
+        let previous = {};
+        let lastPlayers = [];
+        let currentList = [];
+        const testOffsets = {};   // test-button point changes, applied on top of the API scores
+
+        function buildRow(p, rank, isGap) {
+            const li = document.createElement("li");
+            if (p.name === user.name) li.classList.add("you");
+            if (isGap) li.classList.add("gap");
+            if (previous[p.name] !== undefined && previous[p.name] !== p.points) {
+                li.classList.add("flash");
+                setTimeout(() => li.classList.remove("flash"), 800);
+            }
+            const r = document.createElement("span"); r.className = "rank"; r.textContent = rank;
+            const name = document.createElement("span"); name.className = "lb-name"; name.textContent = p.name;
+            const pts = document.createElement("span"); pts.className = "lb-points"; pts.textContent = p.points.toLocaleString();
+            const time = document.createElement("span"); time.className = "lb-time"; time.textContent = formatTime(p.time);
+            li.append(r, name, pts, time);
+            return li;
+        }
+
+        function renderBoard(players) {
+            lastPlayers = players;
+            const limit = device === "mobile" ? 5 : 10;
+
+            const list = players.map((p) => ({ ...p, points: p.points + (testOffsets[p.name] || 0) }));
+            const apiEntry = players.find((p) => p.name === user.name);
+            if (apiEntry) user.points = apiEntry.points;
+            else list.push({ name: user.name, points: user.points + (testOffsets[user.name] || 0), time: 0 });
+            list.sort(compare);
+            currentList = list;
+
+            const me = list.findIndex((p) => p.name === user.name);
+            showPoints(list[me].points);
+
+            $board.textContent = "";
+            list.slice(0, limit).forEach((p, i) => $board.appendChild(buildRow(p, i + 1, false)));
+            if (me >= limit) $board.appendChild(buildRow(list[me], me + 1, true));
+
+            previous = Object.fromEntries(list.map((p) => [p.name, p.points]));
+            renderTestInfo();
+        }
+
+        // Test buttons: add / subtract points for the current top two players
+        const TEST_STEP = 10;
+        const $testInfo = $("testInfo");
+        const $addBtn = $("addPointsBtn");
+        const $subBtn = $("subPointsBtn");
+        $addBtn.textContent = "+" + TEST_STEP + " to top 2";
+        $subBtn.textContent = "−" + TEST_STEP + " from top 2";
+
+        function renderTestInfo() {
+            const top = currentList.slice(0, 2);
+            $testInfo.textContent = top.length
+                ? "Top 2 now: " + top.map((p) => p.name + " (" + p.points.toLocaleString() + ")").join(", ")
+                : "Waiting for leaderboard data…";
+        }
+
+        function changeTopTwo(direction) {
+            if (!lastPlayers.length) return;
+            currentList.slice(0, 2).forEach((p) => {
+                const delta = direction > 0 ? TEST_STEP : -Math.min(TEST_STEP, p.points);   // never below 0
+                testOffsets[p.name] = (testOffsets[p.name] || 0) + delta;
+            });
+            renderBoard(lastPlayers);
+        }
+        $addBtn.addEventListener("click", () => changeTopTwo(1));
+        $subBtn.addEventListener("click", () => changeTopTwo(-1));
+
+        // Polling only runs while the question view is open
+        let boardTimer = null;
+        let boardBusy = false;
+
+        async function refreshBoard() {
+            if (boardBusy || currentView !== "question") return;
+            boardBusy = true;
+            try {
+                renderBoard(await fetchLeaderboard());
+                $status.textContent = "Updated " + new Date().toLocaleTimeString();
+            } catch (err) {
+                console.error("Leaderboard error:", err);
+                $status.textContent = "Connection issue, retrying…";
+            } finally {
+                boardBusy = false;
+            }
+        }
+
+        function syncSidebarToDevice() {
+            if (currentView !== "question") return;
+            if (device === "desktop") openNav(); else closeNav();
+        }
+
+        function enterLeaderboard() {
+            syncSidebarToDevice();
+            refreshBoard();
+            if (!boardTimer) {
+                boardTimer = setInterval(() => { if (!document.hidden) refreshBoard(); }, CFG.REFRESH_MS);
+            }
+        }
+
+        function exitLeaderboard() {
+            closeNav();
+            clearInterval(boardTimer);
+            boardTimer = null;
+        }
+
+        function applyDevice() {
+            const next = detectDevice();
+            if (next === device) return;
+            device = next;
+            root.classList.toggle("is-mobile", device === "mobile");
+            root.classList.toggle("is-desktop", device === "desktop");
+            root.dataset.device = device;
+            syncSidebarToDevice();
+            if (lastPlayers.length) renderBoard(lastPlayers);
+        }
+
+        window.addEventListener("resize", applyDevice);
+        window.addEventListener("orientationchange", applyDevice);
+        document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshBoard(); });
+
+        // ===== Go =====
+        applyDevice();
+        loadList();
+    })();
+</script>
+</body>
+</html>
