@@ -1,8 +1,45 @@
+/*
+ Error Handling
+ Add way for user to input username
+
+
+
+
+*/
+
 const appName = "CursedGold";
 const userName = "test";
 
 const challengeList = document.getElementById("challengeList");
 
+
+//**********************************************************************************>
+//Cookie Functions
+function getCookie(cookieName) {
+    let cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+
+        if (cookie.startsWith(cookieName + "=")) {
+            return cookie.substring(cookieName.length + 1)
+        }
+    }
+
+    return ""
+}
+
+function setCookie(name, value, expiration) {
+
+    let date = new Date();
+
+    date.setTime(date.getTime() + (expiration * 24 * 60 * 60 * 1000));
+
+    let expires = "expires=" + date.toUTCString();
+
+    document.cookie = name + "=" + value + ";" + expires + ";path=/;";
+
+
+}
 //Hunt Table Function
 function declareHunt(hunt) {
 
@@ -47,9 +84,23 @@ function huntArray(translatedJson) {
         //Join Row
         let jRow = document.createElement("tr");
         let jCell = document.createElement("td");
-        jCell.innerHTML = "<a href='https://codecyprus.org/th/api/start?player=" + userName + "&app="+ appName +"&treasure-hunt-id=" + HuntArray[i].uuid + "'>Join Hunt</a>";
-        jCell.colSpan = 2;
-        jCell.style.textAlign = "center";
+        jCell.textContent = "Join Hunt";
+        jCell.addEventListener("click",function() {
+
+        fetch("https://codecyprus.org/th/api/start?player=" + userName + "&app="
+            + appName + "&treasure-hunt-id=" + hunt.uuid)
+
+            .then(response => response.json())
+            .then(translatedJson => {
+                     setCookie("session", translatedJson.session, 365)
+
+                    location.href = "questions.html";
+                })
+            .catch(error => {
+                console.log(error);
+            });
+            })
+
         jRow.appendChild(jCell);
         huntTable.appendChild(jRow);
 
@@ -65,5 +116,9 @@ fetch("https://codecyprus.org/th/api/list?include-active")
     .then(translatedJson => {
         console.log(translatedJson);
         huntArray(translatedJson);
+    })
+
+    .catch(error => {
+        console.log(error);
     })
 
