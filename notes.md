@@ -36,3 +36,10 @@
 - All team members begun their respective tasks
 - Creation of social media accounts by Marketing
 - Basic Design Plans created
+
+## Date: 09-11-2026
+
+**Notes from in-class meeting**
+- v0.1 Active Hunt list page has been pushed onto main
+- Designs for pages have been completed & beginning of CSS creation
+
