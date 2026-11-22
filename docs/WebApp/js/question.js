@@ -16,9 +16,34 @@ function getCookie(cookieName) {
 
 const sessionUUID = getCookie("session");
 
+function mcqQuestion(){
+    console.log("MCQ Question");
+}
+
 fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
     .then(res => res.json())
     .then(json => {
         console.log(json);
         document.getElementById("questionArea").innerHTML = json.questionText;
+        switch (json.questionType) {
+            case "MCQ":
+                console.log("MCQ");
+                mcqQuestion();
+                break;
+            case "TEXT":
+                console.log("TEXT");
+                textQuestion();
+                break;
+            case "NUMERIC":
+                numericQuestion();
+                break;
+            case "BOOLEAN":
+                console.log("Boolean");
+                booleanQuestion();
+                break;
+            case "INTEGER":
+                console.log("INTEGER");
+                integerQuestion();
+                break;
+        }
     })
