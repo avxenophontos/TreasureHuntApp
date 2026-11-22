@@ -16,8 +16,49 @@ function getCookie(cookieName) {
 
 const sessionUUID = getCookie("session");
 
+function submitAnswer(answer) {
+
+    fetch("https://codecyprus.org/th/api/answer?session=" + sessionUUID + "&answer=" + answer)
+        .then(res => res.json())
+        .then(json => {
+            console.log(json);
+        });
+
+}
+
 function mcqQuestion(){
     console.log("MCQ Question");
+
+    let questionArea = document.getElementById("answerArea");
+
+    let optionA = document.createElement("button");
+    optionA.textContent = "A";
+    questionArea.appendChild(optionA);
+    optionA.addEventListener("click", function() {
+        submitAnswer("A");
+    });
+
+    let optionB = document.createElement("button");
+    optionB.textContent = "B";
+    questionArea.appendChild(optionB);
+    optionB.addEventListener("click", function() {
+        submitAnswer("B");
+    });
+
+    let optionC = document.createElement("button");
+    optionC.textContent = "C";
+    questionArea.appendChild(optionC);
+    optionC.addEventListener("click", function() {
+        submitAnswer("C");
+    });
+
+    let optionD = document.createElement("button");
+    optionD.textContent = "D";
+    questionArea.appendChild(optionD);
+    optionD.addEventListener("click", function() {
+        submitAnswer("D");
+    });
+
 }
 
 fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
@@ -46,4 +87,5 @@ fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
                 integerQuestion();
                 break;
         }
-    })
+    }
+    )
