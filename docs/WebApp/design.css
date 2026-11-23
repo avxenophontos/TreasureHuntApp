@@ -8,6 +8,7 @@ body *{
 }
 body {
     background-image: url("../Media/light background.png");
+    background-size: cover;
 }
 h1 {
     color:  saddlebrown;
