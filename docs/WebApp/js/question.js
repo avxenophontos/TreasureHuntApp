@@ -94,6 +94,26 @@ function booleanQuestion(){
         submitAnswer("FALSE");
     });
 }
+function integerQuestion(){
+    console.log("Integer Question");
+
+    let answerArea = document.getElementById("answerArea");
+
+    let integer = document.createElement("input");
+    integer.placeholder = "Enter a number:";
+    integer.type = "number"
+    integer.step = "1"
+    answerArea.appendChild(integer);
+
+
+    let submitButton = document.createElement("button");
+    submitButton.textContent = "Submit";
+    answerArea.appendChild(submitButton);
+
+    submitButton.addEventListener("click", function() {
+        submitAnswer(integer.value);
+    });
+}
 
 fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
     .then(res => res.json())
