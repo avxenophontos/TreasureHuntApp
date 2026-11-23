@@ -96,6 +96,7 @@ fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
         let answerArea = document.getElementById("answerArea");
 
         let number = document.createElement("input");
+        number.type = "number";
         number.placeholder = "Enter a number: ";
         answerArea.appendChild(number);
 
