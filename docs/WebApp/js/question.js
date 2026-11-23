@@ -60,22 +60,6 @@ function mcqQuestion(){
     });
 
 }
-function textQuestion(){
-    console.log("Text Question");
-    let answerArea = document.getElementById("answerArea");
-
-    let text = document.createElement("textarea");
-    text.placeholder = "Enter answer here: "
-    answerArea.appendChild(text);
-
-    let submitButton = document.createElement("button");
-    submitButton.textContent = "Submit";
-    answerArea.appendChild(submitButton);
-
-    submitButton.addEventListener("click", function() {
-        submitAnswer(text.value);
-    });
-}
 
 fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
     .then(res => res.json())
