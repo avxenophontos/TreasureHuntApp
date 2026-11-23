@@ -15,7 +15,6 @@ function getCookie(cookieName) {
 }
 
 const sessionUUID = getCookie("session");
-
 function submitAnswer(answer) {
 
     fetch("https://codecyprus.org/th/api/answer?session=" + sessionUUID + "&answer=" + answer)
@@ -74,6 +73,45 @@ function textQuestion(){
 
     submitButton.addEventListener("click", function() {
         submitAnswer(text.value);
+    });
+}
+function booleanQuestion(){
+
+    console.log("Boolean Question");
+    let answerArea = document.getElementById("answerArea");
+
+    let optionA = document.createElement("button");
+    optionA.textContent = "TRUE";
+    answerArea.appendChild(optionA);
+    optionA.addEventListener("click", function() {
+        submitAnswer("TRUE");
+    });
+
+    let optionB = document.createElement("button");
+    optionB.textContent = "FALSE";
+    answerArea.appendChild(optionB);
+    optionB.addEventListener("click", function() {
+        submitAnswer("FALSE");
+    });
+}
+function integerQuestion(){
+    console.log("Integer Question");
+
+    let answerArea = document.getElementById("answerArea");
+
+    let integer = document.createElement("input");
+    integer.placeholder = "Enter a number:";
+    integer.type = "number"
+    integer.step = "1"
+    answerArea.appendChild(integer);
+
+
+    let submitButton = document.createElement("button");
+    submitButton.textContent = "Submit";
+    answerArea.appendChild(submitButton);
+
+    submitButton.addEventListener("click", function() {
+        submitAnswer(integer.value);
     });
 }
 
