@@ -59,9 +59,11 @@ function fetchStart(userName, huntUUID){
     fetch("https://codecyprus.org/th/api/start?player=" + userName + "&app=" + appName + "&treasure-hunt-id=" + huntUUID)
         .then(response => response.json())
         .then(translatedJson => {
-            setCookie("session", translatedJson.session, 365)
+            if (translatedJson.status === "OK") {
+                setCookie("session", translatedJson.session, 365)
 
-            location.href = "questions.html";
+                location.href = "questions.html";
+            }
         })
         .catch(error => {
             console.log(error);
