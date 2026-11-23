@@ -15,16 +15,33 @@ function getCookie(cookieName) {
 }
 
 const sessionUUID = getCookie("session");
-function submitAnswer(answer) {
 
+function submitAnswer(answer) {
     fetch("https://codecyprus.org/th/api/answer?session=" + sessionUUID + "&answer=" + answer)
+        .then(res => res.json())
+        .then(json => {
+            if (json.correct === true) {
+
+                if (json.completed === false) {
+                    document.getElementById("answerArea").innerHTML = "";
+                    getQuestion();
+                }
+
+            } else {
+                document.getElementById("answerArea").textContent = json.message;
+
+            }
+        });
+}
+function getScore() {
+
+    fetch("https://codecyprus.org/th/api/score?session=" + sessionUUID)
         .then(res => res.json())
         .then(json => {
             console.log(json);
         });
 
 }
-
 function mcqQuestion(){
     console.log("MCQ Question");
 
@@ -132,31 +149,34 @@ function numericQuestion(){
     });
 }
 
-fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
-    .then(res => res.json())
-    .then(json => {
-        console.log(json);
-        document.getElementById("questionArea").innerHTML = json.questionText;
-        switch (json.questionType) {
-            case "MCQ":
-                console.log("MCQ");
-                mcqQuestion();
-                break;
-            case "TEXT":
-                console.log("TEXT");
-                textQuestion();
-                break;
-            case "NUMERIC":
-                numericQuestion();
-                break;
-            case "BOOLEAN":
-                console.log("Boolean");
-                booleanQuestion();
-                break;
-            case "INTEGER":
-                console.log("INTEGER");
-                integerQuestion();
-                break;
-        }
-    }
-    )
+function getQuestion() {
+    fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
+        .then(res => res.json())
+        .then(json => {
+                console.log(json);
+                document.getElementById("questionArea").innerHTML = json.questionText;
+                switch (json.questionType) {
+                    case "MCQ":
+                        console.log("MCQ");
+                        mcqQuestion();
+                        break;
+                    case "TEXT":
+                        console.log("TEXT");
+                        textQuestion();
+                        break;
+                    case "NUMERIC":
+                        numericQuestion();
+                        break;
+                    case "BOOLEAN":
+                        console.log("Boolean");
+                        booleanQuestion();
+                        break;
+                    case "INTEGER":
+                        console.log("INTEGER");
+                        integerQuestion();
+                        break;
+                }
+            }
+        )
+}
+getQuestion();
