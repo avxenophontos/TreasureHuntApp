@@ -1,0 +1,62 @@
+body *{
+    display: flex ;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-family: Arial, Helvetica, sans-serif;
+}
+body {
+    background-image: url("../Media/light background.png");
+}
+h1 {
+    color:  saddlebrown;
+    text-shadow:1.5px 1.5px  3.5px #e29c25  ;
+    box-shadow: 1.5px 1.5px  1.5px  saddlebrown ;
+    border: 5px solid #e29c25;
+}
+.dHeading  {
+
+    color: saddlebrown ;
+    font-family: Lucida Console , Geneva, Tahoma, sans-serif;
+    border-radius:10px;
+    background: #e29c25;
+    font-size: 25px;
+}
+.button:hover{
+    color: black ;
+}
+
+.drow {
+    color : #532e09 ;
+    font-family: Lucida Console, Helvetica, sans-serif ;
+    border-radius:10px;
+    background: #d7d98a;
+}
+
+
+
+.button {
+    box-shadow:1.5px 1.5px 5px #532e09;
+    border-radius: 10px;
+    background-color: #532e09;
+    color:#e29c25;
+    padding: 10px 3px;
+    cursor: pointer;
+
+}
+
+
+
+
+.button:active {
+    background-color: black;
+}
+
+.HuntTable {
+    border-radius: 15px;
+}
+.description {
+    color: saddlebrown;
+
+}
