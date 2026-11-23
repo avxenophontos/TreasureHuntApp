@@ -30,6 +30,8 @@ function declareHunt(hunt) {
 
     let hRow = document.createElement("tr");
     let heading = document.createElement("th");
+    heading.className = "dHeading";
+
     heading.textContent = hunt.name;
     heading.colSpan = 2;
 
@@ -44,8 +46,10 @@ function declareDRow(huntTable, hunt) {
     let dHeading = document.createElement("th");
     dHeading.textContent = "Description";
 
+
     let dValue = document.createElement("td");
     dValue.textContent = hunt.description;
+
 
     dRow.appendChild(dHeading);
     dRow.appendChild(dValue);
@@ -65,8 +69,11 @@ function huntArray(translatedJson) {
 
         //Join Row
         let jRow = document.createElement("tr");
+        jRow.className = "dHeading1";
         let jCell = document.createElement("td");
         jCell.textContent = "Join Hunt";
+
+        jCell.className= "button";
         jCell.addEventListener("click",function() {
 
         fetch("https://codecyprus.org/th/api/start?player=" + userName + "&app="
