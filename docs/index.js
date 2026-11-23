@@ -6,7 +6,7 @@ let tiktokButton = document.getElementById("tiktokButton");
 
 
 startButton.onclick = function() {
-    window.location = "../TreasureHuntApp/docs/WebApp/app.html";
+    window.location = "../TreasureHuntApp/WebApp/app.html";
 };
 
 instagramButton.onclick = function() {
