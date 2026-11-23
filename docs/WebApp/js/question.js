@@ -89,3 +89,21 @@ fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
         }
     }
     )
+
+    function numericQuestion() {
+    console.log("Numeric Question");
+
+        let answerArea = document.getElementById("answerArea");
+
+        let number = document.createElement("input");
+        number.placeholder = "Enter a number: ";
+        answerArea.appendChild(number);
+
+        let submitButton = document.createElement("button");
+        submitButton.textContent = "Submit";
+        answerArea.appendChild(submitButton);
+
+        submitButton.addEventListener("click", function() {
+            submitAnswer(number.value);
+        });
+    }
