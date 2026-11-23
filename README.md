@@ -7,12 +7,12 @@
 ## Team
 | Name | Role |
 |------|------|
-| Andreas  | Team Lead   |
-| Dimitris | Developer 1 |
-| Kyriakos | Developer 2 |
-| Dania    | Designer    |
-| Andreas  | Tester      |
-| George   | Marketing   |
+| Andreas Xenophontos| Team Lead   |
+| Dimitris Antoniou  | Developer 1 |
+| Kyriacos Kupfer    | Developer 2 |
+| Dania Alsheikh     | Designer    |
+| Khalid Famozo      | Tester      |
+| George Panayiotou  | Marketing   |
 
 ## Languages
 - [HTML]
