@@ -1,33 +1,16 @@
 /*
  Error Handling
  Add way for user to input username
-
-
-
-
 */
 
 const appName = "CursedGold";
-const userName = "test";
+const userName = "CursedGoldTesting1";
 
 const challengeList = document.getElementById("challengeList");
 
 
 //**********************************************************************************>
 //Cookie Functions
-function getCookie(cookieName) {
-    let cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-        let cookie = cookies[i].trim();
-
-        if (cookie.startsWith(cookieName + "=")) {
-            return cookie.substring(cookieName.length + 1)
-        }
-    }
-
-    return ""
-}
-
 function setCookie(name, value, expiration) {
 
     let date = new Date();
@@ -37,9 +20,8 @@ function setCookie(name, value, expiration) {
     let expires = "expires=" + date.toUTCString();
 
     document.cookie = name + "=" + value + ";" + expires + ";path=/;";
-
-
 }
+
 //Hunt Table Function
 function declareHunt(hunt) {
 
