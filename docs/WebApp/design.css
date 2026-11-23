@@ -3,7 +3,6 @@ body *{
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: white;
     font-family: Arial, Helvetica, sans-serif;
 }
 body {
@@ -23,6 +22,15 @@ h1 {
     border-radius:10px;
     background: #e29c25;
     font-size: 25px;
+}
+.usernameInput::placeholder {
+    color: #666;
+}
+.usernameInput {
+    color: black;
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 8px;
 }
 .button:hover{
     color: black ;
