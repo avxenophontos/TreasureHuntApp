@@ -103,6 +103,11 @@ function huntArray(translatedJson) {
                 let userName = userNameInput.value.trim();
                 fetchStart(userName, hunt.uuid)
             })
+            uCell.appendChild(userNameInput);
+            uCell.appendChild(uCellStart);
+
+            uRow.appendChild(uCell);
+            huntTable.appendChild(uRow);
             })
 
         jRow.appendChild(jCell);
