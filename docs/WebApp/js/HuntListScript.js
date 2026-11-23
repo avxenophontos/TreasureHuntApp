@@ -4,7 +4,6 @@
 */
 
 const appName = "CursedGold";
-const userName = "CursedGoldTesting1";
 
 const challengeList = document.getElementById("challengeList");
 
@@ -56,6 +55,19 @@ function declareDRow(huntTable, hunt) {
     huntTable.appendChild(dRow);
 
 }
+function fetchStart(userName, huntUUID){
+    fetch("https://codecyprus.org/th/api/start?player=" + userName + "&app=" + appName + "&treasure-hunt-id=" + huntUUID)
+        .then(response => response.json())
+        .then(translatedJson => {
+            setCookie("session", translatedJson.session, 365)
+
+            location.href = "questions.html";
+        })
+        .catch(error => {
+            console.log(error);
+        });
+}
+
 function huntArray(translatedJson) {
     const HuntArray = translatedJson.treasureHunts;
     for (let i= 0; i < HuntArray.length ; i++) {
@@ -70,24 +82,27 @@ function huntArray(translatedJson) {
         //Join Row
         let jRow = document.createElement("tr");
         jRow.className = "dHeading1";
+
         let jCell = document.createElement("td");
         jCell.textContent = "Join Hunt";
-
         jCell.className= "button";
+
         jCell.addEventListener("click",function() {
+            let uRow = document.createElement("tr");
+            let uCell = document.createElement("td");
+            uCell.colSpan= 2;
 
-        fetch("https://codecyprus.org/th/api/start?player=" + userName + "&app="
-            + appName + "&treasure-hunt-id=" + hunt.uuid)
+            let userNameInput = document.createElement("input");
+            userNameInput.type = "text";
+            userNameInput.placeholder = "Please enter a username:"
+            userNameInput.className= "userName";
 
-            .then(response => response.json())
-            .then(translatedJson => {
-                     setCookie("session", translatedJson.session, 365)
-
-                    location.href = "questions.html";
-                })
-            .catch(error => {
-                console.log(error);
-            });
+            let uCellStart = document.createElement("button")
+            uCellStart.textContent = "Start:"
+            uCellStart.addEventListener("click", function() {
+                let userName = userNameInput.value.trim();
+                fetchStart(userName, hunt.uuid)
+            })
             })
 
         jRow.appendChild(jCell);
