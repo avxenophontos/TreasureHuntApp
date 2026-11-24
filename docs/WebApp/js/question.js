@@ -28,10 +28,29 @@ function submitAnswer(answer) {
                 }
 
             } else {
-                document.getElementById("answerArea").textContent = json.message;
+                document.getElementById("ResponseArea").textContent = json.message;
 
             }
         });
+}
+function skipQuestion() {
+    fetch("https://codecyprus.org/th/api/skip?session=" + sessionUUID)
+        .then(res => res.json())
+        .then(json => {
+            getQuestion();
+        })
+}
+function skipSetup(){
+    let skipArea = document.getElementById("skipArea");
+    skipArea.innerHTML = "";
+
+    let skip = document.createElement("button");
+    skip.textContent = "Skip";
+    skipArea.appendChild(skip);
+
+    skip.addEventListener("click", function() {
+        skipQuestion();
+    });
 }
 function getScore() {
 
@@ -45,36 +64,35 @@ function getScore() {
 function mcqQuestion(){
     console.log("MCQ Question");
 
-    let questionArea = document.getElementById("answerArea");
+    let answerArea = document.getElementById("answerArea");
 
     let optionA = document.createElement("button");
     optionA.textContent = "A";
-    questionArea.appendChild(optionA);
+    answerArea.appendChild(optionA);
     optionA.addEventListener("click", function() {
         submitAnswer("A");
     });
 
     let optionB = document.createElement("button");
     optionB.textContent = "B";
-    questionArea.appendChild(optionB);
+    answerArea.appendChild(optionB);
     optionB.addEventListener("click", function() {
         submitAnswer("B");
     });
 
     let optionC = document.createElement("button");
     optionC.textContent = "C";
-    questionArea.appendChild(optionC);
+    answerArea.appendChild(optionC);
     optionC.addEventListener("click", function() {
         submitAnswer("C");
     });
 
     let optionD = document.createElement("button");
     optionD.textContent = "D";
-    questionArea.appendChild(optionD);
+    answerArea.appendChild(optionD);
     optionD.addEventListener("click", function() {
         submitAnswer("D");
     });
-
 }
 function textQuestion(){
     console.log("Text Question");
@@ -150,6 +168,7 @@ function numericQuestion(){
 }
 
 function getQuestion() {
+    document.getElementById("answerArea").innerHTML = "";
     fetch("https://codecyprus.org/th/api/question?session=" + sessionUUID)
         .then(res => res.json())
         .then(json => {
@@ -175,6 +194,9 @@ function getQuestion() {
                         console.log("INTEGER");
                         integerQuestion();
                         break;
+                }
+                if (json.canBeSkipped === true){
+                    skipSetup();
                 }
             }
         )
