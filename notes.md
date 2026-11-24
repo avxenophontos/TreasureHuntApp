@@ -43,3 +43,12 @@
 - v0.1 Active Hunt list page has been pushed onto main
 - Designs for pages have been completed & beginning of CSS creation
 
+## Date: 24-11/2026
+
+**Notes from in-class meeting**
+- Pushed major commits and the application is mostly working now
+- Have a basic design available and usable
+- Require QR code scanner, leader-board and Location API calling.
+- Require Error handling, crash handling and basic debugging in the code.
+- Any issues found will be reported through the Git Issues system.
+- 
